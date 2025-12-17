@@ -1,10 +1,12 @@
-mod sev;
-
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
+
+mod pck;
+mod sev;
+mod tdx;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -31,13 +33,19 @@ enum Commands {
     },
     /// Verify a report
     Verify {
-        /// Path to the quote file to verify
+        /// Path to the report file to verify
         #[arg(value_name = "FILE")]
         path: PathBuf,
 
         /// Path to directory containing certificate chain (ark.pem, ask.pem, vcek.pem)
         #[arg(short, long, value_name = "DIR")]
         certs_dir: Option<PathBuf>,
+    },
+    /// Fetch PCK certificate from Intel PCS (for TDX hosts)
+    FetchPck {
+        /// Output directory for certificates
+        #[arg(short, long, default_value = ".")]
+        output: PathBuf,
     },
 }
 
@@ -74,16 +82,15 @@ fn main() -> Result<()> {
             }
         }
         Commands::Verify { path, certs_dir } => {
-            let quote_bytes =
-                fs::read(&path).context(format!("Failed to read quote file {}", path.display()))?;
+            let report_bytes = fs::read(&path)
+                .context(format!("Failed to read report file {}", path.display()))?;
 
             let provider =
                 provider.ok_or_else(|| anyhow::anyhow!("The provider must be specified"))?;
 
             match provider.as_str() {
                 "sev_guest" => {
-                    let report = sev::parse_report(&quote_bytes)?;
-
+                    let report = sev::parse_report(&report_bytes)?;
                     println!("{:#?}", report);
                     if let Some(certs_dir) = certs_dir {
                         sev::verify_report(&report, &certs_dir)?;
@@ -91,14 +98,39 @@ fn main() -> Result<()> {
                     }
                 }
                 "tdx_guest" => {
-                    let quote = tdx_quote::Quote::from_bytes(&quote_bytes)
-                        .map_err(|e| anyhow::anyhow!("Failed to parse TDX quote: {:?}", e))?;
+                    let quote = tdx::parse_quote(&report_bytes)?;
                     println!("{:#?}", quote);
+                    tdx::verify_quote(&quote, certs_dir.as_deref())?;
+                    println!("Verification successful!");
                 }
                 _ => {
                     return Err(anyhow::anyhow!("Unsupported provider: {}", provider));
                 }
             }
+        }
+        Commands::FetchPck { output } => {
+            eprintln!("Retrieving platform information...");
+            let platform_info = pck::get_platform_info()?;
+            eprintln!("Platform info retrieved:");
+            eprintln!(
+                "  PPID: {}...",
+                &platform_info.encrypted_ppid[..32.min(platform_info.encrypted_ppid.len())]
+            );
+            eprintln!("  PCE ID: {}", platform_info.pce_id);
+            eprintln!("  CPU SVN: {}", platform_info.cpu_svn);
+            eprintln!("  PCE SVN: {}", platform_info.pce_svn);
+            eprintln!("  QE ID: {}", platform_info.qe_id);
+
+            eprintln!("\nFetching PCK certificate from Intel PCS...");
+            let response = pck::fetch_pck_certificate(&platform_info)?;
+            eprintln!("Certificate retrieved:");
+            eprintln!("  FMSPC: {}", response.fmspc);
+            eprintln!("  TCBm: {}", response.tcbm);
+            eprintln!("  CA Type: {}", response.ca_type);
+
+            eprintln!("\nSaving certificates...");
+            pck::save_certificates(&response, &output)?;
+            eprintln!("\nDone!");
         }
     }
 

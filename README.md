@@ -1,6 +1,6 @@
 # CVM Tool
 
-A CLI tool to generate Confidential VM (CVM) reports/quotes using the `configfs-tsm` crate, and verify.
+A CLI tool to generate Confidential VM (CVM) reports/quotes using Linux TSM and verify them.
 
 ## Usage
 
@@ -22,19 +22,21 @@ cvmtool -- report --output cvm_report.bin
 cvmtool -- report --nonce 0102030405060708 --output cvm_report_with_nonce.bin
 ```
 
-The output is the raw quote in **binary format**. When `--output` is used, a message indicating successful writing will be printed to stderr.
+The output is the raw report in **binary format**. When `--output` is used, a message indicating successful writing will be printed to stderr.
 
 To view the binary report, you can use tools like `xxd` (e.g., `xxd cvm_report.bin`).
 
-### Verify a Quote
+### Verify a Report
 
-To verify (parse and inspect) a TDX quote, use the `verify` subcommand with the path to the quote file.
+To verify (parse and inspect) a report, use the `verify` subcommand with the path to the report file.
 
 ```bash
 cvmtool -- -p sev_guest verify cvm_report.bin --certs-dir .
 ```
 
-This will parse the binary quote file and print its header and body details (e.g., version, TEE type, RTMRs, Report Data).
+This will parse the binary report file and print its header and body details (e.g., version, TEE type, RTMRs, Report Data).
+
+It returns a success status code if the report is valid, or an error code if it is invalid.
 
 ## Requirements
 

@@ -13,6 +13,8 @@ sev = { version = "7.1.0", features = ["openssl"] }
 openssl = "0.10"
 x509-parser = "0.18"
 asn1-rs = "0.7"
+reqwest = { version = "0.12", features = ["blocking"] }
+percent-encoding = "2.3"
 
 [dev-dependencies]
 assert_cmd = "2.0"

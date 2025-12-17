@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use asn1_rs::{oid, Oid};
+use asn1_rs::{Oid, oid};
 use openssl::{ecdsa::EcdsaSig, sha::Sha384};
 use sev::certs::snp::{Certificate, Verifiable};
 use sev::firmware::guest::AttestationReport;
