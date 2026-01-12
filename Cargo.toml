@@ -9,15 +9,15 @@ configfs-tsm = "0.0.2"
 hex = "0.4"
 anyhow = "1.0"
 clap = { version = "4.5", features = ["derive"] }
-tdx-quote = "0.0.4"
+tdx-quote = "0.0.5"
 sev = { version = "7.1.0", features = ["openssl"] }
 openssl = "0.10"
 x509-parser = "0.18"
 asn1-rs = "0.7"
-reqwest = { version = "0.12", features = ["blocking"] }
+reqwest = { version = "0.13", features = ["blocking"] }
 percent-encoding = "2.3"
 
 [dev-dependencies]
-assert_cmd = "2.0"
+assert_cmd = "2.1"
 predicates = "3.1"
-tempfile = "3.15"
+tempfile = "3.24"
