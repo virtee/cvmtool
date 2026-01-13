@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use assert_cmd::{Command, cargo::cargo_bin_cmd};
 use predicates::prelude::*;
 use std::fs;
