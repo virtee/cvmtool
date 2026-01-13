@@ -130,7 +130,11 @@ pub fn fetch_pck_certificate(platform_info: &PlatformInfo) -> Result<PckCertific
     })
 }
 
-pub fn save_certificates(response: &PckCertificateResponse, output_dir: &Path) -> Result<()> {
+pub fn save_certificates(
+    response: &PckCertificateResponse,
+    output_dir: &Path,
+    verbose: bool,
+) -> Result<()> {
     fs::create_dir_all(output_dir).context(format!(
         "Failed to create output directory {}",
         output_dir.display()
@@ -141,14 +145,18 @@ pub fn save_certificates(response: &PckCertificateResponse, output_dir: &Path) -
         "Failed to write PCK certificate to {}",
         pck_path.display()
     ))?;
-    eprintln!("Saved PCK certificate to {}", pck_path.display());
+    if verbose {
+        eprintln!("Saved PCK certificate to {}", pck_path.display());
+    }
 
     let issuer_chain_path = output_dir.join("pck_issuer_chain.pem");
     fs::write(&issuer_chain_path, &response.issuer_chain).context(format!(
         "Failed to write issuer chain to {}",
         issuer_chain_path.display()
     ))?;
-    eprintln!("Saved issuer chain to {}", issuer_chain_path.display());
+    if verbose {
+        eprintln!("Saved issuer chain to {}", issuer_chain_path.display());
+    }
 
     let metadata_path = output_dir.join("pck_metadata.txt");
     let metadata = format!(
@@ -159,7 +167,9 @@ pub fn save_certificates(response: &PckCertificateResponse, output_dir: &Path) -
         "Failed to write metadata to {}",
         metadata_path.display()
     ))?;
-    eprintln!("Saved metadata to {}", metadata_path.display());
+    if verbose {
+        eprintln!("Saved metadata to {}", metadata_path.display());
+    }
 
     Ok(())
 }

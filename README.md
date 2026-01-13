@@ -10,13 +10,17 @@ To generate a TSM report/quote, use the `report` subcommand. You can optionally 
 
 ```bash
 # Generate report, print to stdout (with zero-nonce)
-cvmtool report
+cvmtool report -
 
 # Generate report with a nonce and write to a file
-cvmtool report --nonce 0102030405060708 --output cvm_report_with_nonce.bin
+cvmtool report --report-data 0102030405060708 cvm_report_with_nonce.bin
+
+# Generate report with a digest of a unique companion document and write to a file
+DIGEST=$(sha256sum cvm_report.json)
+cvmtool report --report-data $(DIGEST) cvm_report_with_digest.bin
 ```
 
-The output is the raw report in **binary format**. When `--output` is used, a message indicating successful writing will be printed to stderr.
+The output is the raw report in **binary format**. The output target is a file, a message indicating successful writing will be printed to stdout.
 
 To view the binary report, you can use tools like `xxd` (e.g., `xxd cvm_report.bin`).
 
@@ -25,12 +29,22 @@ To view the binary report, you can use tools like `xxd` (e.g., `xxd cvm_report.b
 To verify (parse and inspect) a report, use the `verify` subcommand with the path to the report file.
 
 ```bash
-cvmtool -p sev_guest verify cvm_report.bin --certs-dir certs/
+cvmtool verify -f sev cvm_report.bin --certs-dir certs/
 ```
 
 This will parse the binary report file and print its header and body details (e.g., version, TEE type, RTMRs, Report Data).
 
 It returns a success status code if the report is valid, or an error code if it is invalid.
+
+To verify a report acquired from a remote machine, chain together commands over ssh
+
+```bash
+ssh user@remote-vm cvmtool report - | cvmtool verify -f tdx -
+```
+
+NB, the remote VM must have been configured to accept a trusted SSH public key
+or other form of password-less credential. It is unsafe to respond to any remote
+interactive password prompt prior to successfully verifying the attestion report.
 
 ## Requirements
 
