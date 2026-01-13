@@ -199,8 +199,6 @@ fn main() -> Result<()> {
                 fs::read(&path).context(format!("Failed to read report file {}", path.display()))?
             };
 
-            let format = format.ok_or_else(|| anyhow::anyhow!("The format must be specified"))?;
-
             let opts = VerifyOptions {
                 quiet: cli.quiet,
                 report_data,
@@ -216,32 +214,50 @@ fn main() -> Result<()> {
                 policy_no_migration,
             };
 
-            match format.as_str() {
-                "sev" => {
-                    let report = sev::parse_report(&report_bytes)?;
-                    if cli.verbose {
-                        println!("{:#?}", report);
+            if format.is_none() || format == Some("sev".to_string()) {
+                match sev::parse_report(&report_bytes) {
+                    Ok(report) => {
+                        if cli.verbose {
+                            println!("{:#?}", report);
+                        }
+                        if let Some(certs_dir) = certs_dir {
+                            sev::verify_report(&report, &certs_dir, &opts)?;
+                            if !cli.quiet {
+                                println!("Verified SEV attestation report");
+                            }
+                        }
+                        return Ok(());
                     }
-                    if let Some(certs_dir) = certs_dir {
-                        sev::verify_report(&report, &certs_dir, &opts)?;
-                        if !cli.quiet {
-                            println!("Verification successful!");
+
+                    Err(err) => {
+                        if format.is_some() {
+                            return Err(err);
                         }
                     }
                 }
-                "tdx" => {
-                    let quote = tdx::parse_quote(&report_bytes)?;
-                    if cli.verbose {
-                        println!("{:#?}", quote);
+            }
+            if format.is_none() || format == Some("tdx".to_string()) {
+                match tdx::parse_quote(&report_bytes) {
+                    Ok(quote) => {
+                        if cli.verbose {
+                            println!("{:#?}", quote);
+                        }
+                        tdx::verify_quote(&quote, certs_dir.as_deref(), &opts)?;
+                        if !cli.quiet {
+                            println!("Verified TDX attestation report");
+                        }
+                        return Ok(());
                     }
-                    tdx::verify_quote(&quote, certs_dir.as_deref(), &opts)?;
-                    if !cli.quiet {
-                        println!("Verification successful!");
+                    Err(err) => {
+                        if format.is_some() {
+                            return Err(err);
+                        }
                     }
                 }
-                _ => {
-                    return Err(anyhow::anyhow!("Unsupported format: {}", format));
-                }
+            }
+            match format {
+                Some(format) => return Err(anyhow::anyhow!("Unsupported format: {}", format)),
+                None => return Err(anyhow::anyhow!("Unable to detect report format")),
             }
         }
         Commands::FetchPck { output } => {
