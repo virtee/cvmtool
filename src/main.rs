@@ -101,7 +101,7 @@ enum Commands {
     FetchPck {
         /// Output directory for certificates
         #[arg(short, long, default_value = ".")]
-        output: PathBuf,
+        certs_dir: PathBuf,
     },
 }
 
@@ -260,7 +260,7 @@ fn main() -> Result<()> {
                 None => return Err(anyhow::anyhow!("Unable to detect report format")),
             }
         }
-        Commands::FetchPck { output } => {
+        Commands::FetchPck { certs_dir } => {
             if cli.verbose {
                 println!("Retrieving platform information...");
             }
@@ -289,9 +289,9 @@ fn main() -> Result<()> {
 
                 println!("\nSaving certificates...");
             }
-            pck::save_certificates(&response, &output, cli.verbose)?;
+            pck::save_certificates(&response, &certs_dir, cli.verbose)?;
             if !cli.quiet {
-                println!("Saved certificates to {:?}", output);
+                println!("Saved certificates to {:?}", certs_dir);
             }
         }
     }
