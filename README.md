@@ -46,6 +46,29 @@ NB, the remote VM must have been configured to accept a trusted SSH public key
 or other form of password-less credential. It is unsafe to respond to any remote
 interactive password prompt prior to successfully verifying the attestion report.
 
+#### Required certificates
+
+To validate an attestation report and its measurements, the report's signature must be verified to the TEE manufacturer's root-of-trust.
+These certificates are specific to the TEE architecture and must be submitted alongside the report. For each TEE architecture, the required
+certificate(s) are as follows:
+
+- AMD SEV-SNP: AMD Root Key (ARK), AMD Signing Key (ASK), Versioned Chip Endorsement Key (VCEK).
+```
+{certs-dir} \
+    ark.{der, pem}
+    ask.{der, pem}
+    vcek.{der, pem}
+```
+- Intel TDX: Provisioning Certification Key (PCK), PCK Issuer Chain\*.
+```
+{certs-dir} \
+   pck.pem
+   pck_issuer_chain.pem
+```
+
+\* User-provided TDX certificate chains are optional. If the certificate chain is not provided, it will be fetched from the TDX quote (if available).
+The `fetch-pck` subcommand can be used to fetch the certificate chain from the Intel Provisioning Certification Service.
+
 ## Requirements
 
 This tool requires:
