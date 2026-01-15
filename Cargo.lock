@@ -440,6 +440,7 @@ dependencies = [
  "openssl",
  "percent-encoding",
  "predicates",
+ "rand",
  "reqwest",
  "sev",
  "tdx-quote",

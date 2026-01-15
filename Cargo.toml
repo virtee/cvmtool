@@ -16,6 +16,7 @@ x509-parser = "0.18"
 asn1-rs = "0.7"
 reqwest = { version = "0.13", features = ["blocking"] }
 percent-encoding = "2.3"
+rand = "0.9.2"
 
 [dev-dependencies]
 assert_cmd = "2.0"
