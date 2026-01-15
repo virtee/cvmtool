@@ -9,7 +9,7 @@ A CLI tool to generate Confidential VM (CVM) reports/quotes using Linux TSM and 
 To generate a TSM report/quote, use the `report` subcommand. You can optionally provide a nonce (hex string) and an output file path.
 
 ```bash
-# Generate report, print to stdout (with zero-nonce)
+# Generate report (with randomly-generated nonce), print to stdout
 cvmtool report -
 
 # Generate report with a nonce and write to a file

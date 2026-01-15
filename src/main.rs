@@ -143,10 +143,13 @@ fn main() -> Result<()> {
             report_data,
         } => {
             let mut input = [0u8; 64];
-            if let Some(n) = report_data {
-                let n = hex::decode(&n).context("Invalid hex string for report data")?;
-                let len = n.len().min(64);
-                input[..len].copy_from_slice(&n[..len]);
+            match report_data {
+                Some(n) => {
+                    let n = hex::decode(&n).context("Invalid hex string for report data")?;
+                    let len = n.len().min(64);
+                    input[..len].copy_from_slice(&n[..len]);
+                }
+                None => rand::fill(&mut input[..]), // Randomly generate the report data.
             }
 
             let quote = if let Some(format) = format {
