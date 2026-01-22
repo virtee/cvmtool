@@ -308,9 +308,8 @@ fn verify(
                 if opts.verbose {
                     println!("{:#?}", report);
                 }
-                let certs_dir = certs_dir.ok_or_else(|| {
-                    anyhow::anyhow!("Certificates directory not provided")
-                })?;
+                let certs_dir = certs_dir
+                    .ok_or_else(|| anyhow::anyhow!("Certificates directory not provided"))?;
                 sev::verify_report(&report, &certs_dir, &opts)?;
                 if !opts.quiet {
                     println!("Verified SEV attestation report");
