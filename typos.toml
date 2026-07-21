@@ -6,6 +6,14 @@ extend-exclude = [
 
     # Contributor names aren't typos.
     ".mailmap",
+
+    # Untracked local directories (not in repo)
+    "confidential-computing.tee.dcap/",
+    "confidential-computing.tee.dcap.qvl/",
+    "docs/",
+    "go-tdx-qpl/",
+    "snpguest/",
+    "tdx/",
 ]
 
 [default]
