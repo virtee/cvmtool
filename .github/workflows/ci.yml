@@ -56,6 +56,18 @@ jobs:
       - uses: ./.github/actions/setup
       - run: cargo test --all-features
 
+  msrv:
+    name: MSRV
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.95"
+      - uses: Swatinem/rust-cache@v2
+      - uses: ./.github/actions/setup
+      - run: cargo check --all-features
+
   build:
     name: Build
     runs-on: ubuntu-latest

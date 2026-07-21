@@ -25,17 +25,17 @@ pub enum IsolationType {
 }
 
 pub fn get_isolation_type() -> Option<IsolationType> {
-    let cpuid = unsafe { __cpuid(CPUID_PROCESSOR_INFO_AND_FEATURE_BITS) };
+    let cpuid = __cpuid(CPUID_PROCESSOR_INFO_AND_FEATURE_BITS);
     if (cpuid.ecx & CPUID_FEATURE_HYPERVISOR) == 0 {
         return None;
     }
 
-    let cpuid = unsafe { __cpuid(CPUID_GET_HIGHEST_FUNCTION) };
+    let cpuid = __cpuid(CPUID_GET_HIGHEST_FUNCTION);
     if cpuid.eax < CPUID_HYPERV_VENDOR_AND_MAX_FUNCTIONS {
         return None;
     }
 
-    let cpuid = unsafe { __cpuid(CPUID_HYPERV_VENDOR_AND_MAX_FUNCTIONS) };
+    let cpuid = __cpuid(CPUID_HYPERV_VENDOR_AND_MAX_FUNCTIONS);
     if cpuid.eax < CPUID_HYPERV_MIN || cpuid.eax > CPUID_HYPERV_MAX {
         return None;
     }
@@ -49,7 +49,7 @@ pub fn get_isolation_type() -> Option<IsolationType> {
         return None;
     }
 
-    let cpuid = unsafe { __cpuid(CPUID_HYPERV_FEATURES) };
+    let cpuid = __cpuid(CPUID_HYPERV_FEATURES);
     let isolated = (cpuid.ebx & CPUID_HYPERV_ISOLATION) != 0;
     let managed = (cpuid.ebx & CPUID_HYPERV_CPU_MANAGEMENT) != 0;
 
@@ -57,7 +57,7 @@ pub fn get_isolation_type() -> Option<IsolationType> {
         return None;
     }
 
-    let cpuid = unsafe { __cpuid(CPUID_HYPERV_ISOLATION_CONFIG) };
+    let cpuid = __cpuid(CPUID_HYPERV_ISOLATION_CONFIG);
     let isolation_type = cpuid.ebx & CPUID_HYPERV_ISOLATION_TYPE_MASK;
 
     match isolation_type {
