@@ -19,6 +19,7 @@ pub enum ProcType {
     Bergamo,
     Siena,
     Turin,
+    Venice,
 }
 
 impl ProcType {
@@ -27,6 +28,7 @@ impl ProcType {
             ProcType::Genoa | ProcType::Bergamo | ProcType::Siena => "Genoa",
             ProcType::Milan => "Milan",
             ProcType::Turin => "Turin",
+            ProcType::Venice => "Venice",
         }
     }
 }
@@ -39,6 +41,7 @@ impl fmt::Display for ProcType {
             ProcType::Bergamo => write!(f, "Bergamo"),
             ProcType::Siena => write!(f, "Siena"),
             ProcType::Turin => write!(f, "Turin"),
+            ProcType::Venice => write!(f, "Venice"),
         }
     }
 }
@@ -53,8 +56,9 @@ impl FromStr for ProcType {
             "bergamo" => Ok(ProcType::Bergamo),
             "siena" => Ok(ProcType::Siena),
             "turin" => Ok(ProcType::Turin),
+            "venice" => Ok(ProcType::Venice),
             _ => Err(anyhow::anyhow!(
-                "Unknown processor model: {}. Valid options: milan, genoa, bergamo, siena, turin",
+                "Unknown processor model: {}. Valid options: milan, genoa, bergamo, siena, turin, venice",
                 s
             )),
         }
@@ -91,11 +95,12 @@ pub fn get_processor_model(report: &AttestationReport) -> Result<ProcType> {
     match cpu_family {
         0x19 => match cpu_model {
             0x0..=0xF => Ok(ProcType::Milan),
-            0x10..=0x1F | 0xA0..0xAF => Ok(ProcType::Genoa),
+            0x10..=0x1F | 0xA0..=0xAF => Ok(ProcType::Genoa),
             _ => Err(anyhow::anyhow!("Processor model not supported")),
         },
         0x1A => match cpu_model {
             0x0..=0x11 => Ok(ProcType::Turin),
+            0x50..=0x57 | 0x90..=0x9F | 0xA0..=0xAF | 0xC0..=0xC7 => Ok(ProcType::Venice),
             _ => Err(anyhow::anyhow!("Processor model not supported")),
         },
         _ => Err(anyhow::anyhow!("Processor family not supported")),
@@ -110,14 +115,16 @@ pub fn fetch_vcek_certificate(report: &AttestationReport, processor: &ProcType) 
     }
 
     let hardware_id = match processor {
-        ProcType::Turin => hex::encode(&report.chip_id[0..8]),
+        ProcType::Turin | ProcType::Venice => hex::encode(&report.chip_id[0..8]),
         _ => hex::encode(report.chip_id),
     };
 
     let url = match processor {
-        ProcType::Turin => {
+        ProcType::Turin | ProcType::Venice => {
             let fmc = report.reported_tcb.fmc.ok_or_else(|| {
-                anyhow::anyhow!("Turin processor attestation report must have an fmc value")
+                anyhow::anyhow!(
+                    "Turin or Venice processor attestation report must have an fmc value"
+                )
             })?;
             format!(
                 "{}/vcek/v1/{}/{}?fmcSPL={:02}&blSPL={:02}&teeSPL={:02}&snpSPL={:02}&ucodeSPL={:02}",
