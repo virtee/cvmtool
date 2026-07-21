@@ -58,8 +58,9 @@ certificate(s) are as follows:
     ark.{der, pem}
     ask.{der, pem}
     vcek.{der, pem}
+    crl.{der, pem} (optional)
 ```
-The `fetch-vcek` subcommand can be used to fetch these certificates from AMD's Key Distribution Service (KDS).
+The `fetch-vcek` and `fetch-crl` subcommands can be used to fetch these certificates from AMD's Key Distribution Service (KDS).
 - Intel TDX: Provisioning Certification Key (PCK), PCK Issuer Chain\*.
 ```
 {certs-dir} \
@@ -80,6 +81,15 @@ cvmtool fetch-vcek --certs-dir certs/
 
 # Fetch PCK certificate from Intel PCS (for TDX)
 cvmtool fetch-pck --certs-dir certs/
+```
+
+### Fetch Revocation List (SEV-SNP only, optional)
+
+To fetch the certificate revocation list for verification, use the `fetch-crl` command from within the CVM:
+
+```bash
+# Fetch CRL from AMD KDS
+cvmtool fetch-crl --certs-dir certs/
 ```
 
 ## Azure CVM Support

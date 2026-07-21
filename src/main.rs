@@ -114,6 +114,12 @@ enum Commands {
         #[arg(short, long, default_value = ".")]
         certs_dir: PathBuf,
     },
+    /// Fetch VCEK Certificate Revocation List from AMD KDS (for SEV-SNP)
+    FetchCrl {
+        /// Output directory for the CRL
+        #[arg(short, long, default_value = ".")]
+        certs_dir: PathBuf,
+    },
 }
 
 /// Options for attestation verification beyond cryptographic checks
@@ -289,6 +295,32 @@ fn main() -> Result<()> {
             vcek::save_certificates(&vcek_der, &chain, &certs_dir, cli.verbose)?;
             if !cli.quiet {
                 println!("Saved certificates to {:?}", certs_dir);
+            }
+        }
+        Commands::FetchCrl { certs_dir } => {
+            if cli.verbose {
+                println!("Generating SEV attestation report...");
+            }
+
+            let report = report(Some("sev"), [0; 64])?;
+            let report = sev::parse_report(&report)?;
+
+            let processor = vcek::get_processor_model(&report)?;
+            if cli.verbose {
+                println!("Detected processor: {processor}");
+            }
+
+            if cli.verbose {
+                println!("Fetching CRL from AMD KDS...");
+            }
+            let crl_der = vcek::fetch_crl(&processor)?;
+            if cli.verbose {
+                println!("CRL retrieved ({} bytes)", crl_der.len());
+            }
+
+            vcek::save_crl(&crl_der, &certs_dir, cli.verbose)?;
+            if !cli.quiet {
+                println!("Saved CRL to {:?}", certs_dir);
             }
         }
     }

@@ -3,7 +3,11 @@
 use crate::VerifyOptions;
 use anyhow::{Context, Result};
 use asn1_rs::{Oid, oid};
-use openssl::{ecdsa::EcdsaSig, sha::Sha384};
+use openssl::{
+    ecdsa::EcdsaSig,
+    sha::Sha384,
+    x509::{X509, X509Crl},
+};
 use sev::certs::snp::{Certificate, Verifiable};
 use sev::firmware::guest::AttestationReport;
 use sev::parser::ByteParser;
@@ -71,6 +75,8 @@ pub fn verify_report(
         println!("VCEK was signed by ASK");
     }
 
+    verify_revocation_list(certs_dir, &ark, &ask, &vcek, opts)?;
+
     let vcek_pubkey = vcek
         .public_key()
         .context("Failed to get public key from VCEK")?
@@ -117,6 +123,75 @@ fn find_cert_in_dir(dir: &Path, name: &str) -> Result<PathBuf> {
         "{name} certificate not found in {}",
         dir.display()
     ))
+}
+
+fn load_crl(path: &Path) -> Result<X509Crl> {
+    let data = fs::read(path).context(format!("Failed to read certificate {}", path.display()))?;
+    let is_pem = path.extension().map(|ext| ext == "pem").unwrap_or(false);
+    if is_pem {
+        X509Crl::from_pem(&data).context("Failed to parse PEM certificate")
+    } else {
+        X509Crl::from_der(&data).context("Failed to parse DER certificate")
+    }
+}
+
+/// Checks that the ASK and VCEK have not been revoked by consulting the CRL
+fn verify_revocation_list(
+    certs_dir: &Path,
+    ark: &Certificate,
+    ask: &Certificate,
+    vcek: &Certificate,
+    opts: &VerifyOptions,
+) -> Result<()> {
+    let Ok(path) = find_cert_in_dir(certs_dir, "crl") else {
+        eprintln!(
+            "Warning: no CRL found in {}; ASK revocation status not checked",
+            certs_dir.display()
+        );
+        return Ok(());
+    };
+
+    let crl = load_crl(&path)?;
+
+    let ark_pubkey = ark.public_key().context("Failed to get ARK public key")?;
+    if !crl
+        .verify(&ark_pubkey)
+        .context("Failed to verify CRL signature")?
+    {
+        return Err(anyhow::anyhow!("CRL is not signed by ARK"));
+    }
+
+    let ask_serial = X509::from(ask)
+        .serial_number()
+        .to_bn()
+        .context("Failed to read ASK serial number")?;
+    let vcek_serial = X509::from(vcek)
+        .serial_number()
+        .to_bn()
+        .context("Failed to read VCEK serial number")?;
+
+    // AMD uses TCB versioning rather than CRL entries to supersede old VCEKs, so
+    // VCEK revocation is not expected in practice, but check anyway for completeness.
+    if let Some(revoked) = crl.get_revoked() {
+        for entry in revoked {
+            let entry_serial = entry
+                .serial_number()
+                .to_bn()
+                .context("Failed to read revoked entry serial number")?;
+            if entry_serial == ask_serial {
+                return Err(anyhow::anyhow!("ASK certificate has been revoked"));
+            }
+            if entry_serial == vcek_serial {
+                return Err(anyhow::anyhow!("VCEK certificate has been revoked"));
+            }
+        }
+    }
+
+    if !opts.quiet {
+        println!("ASK and VCEK are not revoked");
+    }
+
+    Ok(())
 }
 
 fn load_certificate(path: &Path) -> Result<Certificate> {

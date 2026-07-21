@@ -244,3 +244,39 @@ pub fn save_certificates(
 
     Ok(())
 }
+
+pub fn fetch_crl(processor: &ProcType) -> Result<Vec<u8>> {
+    let url = format!("{}/vcek/v1/{}/crl", KDS_BASE_URL, processor.to_kds_url());
+
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .get(&url)
+        .send()
+        .context("Failed to send request to AMD KDS for CRL")?;
+
+    response
+        .error_for_status_ref()
+        .context("AMD KDS returned error for CRL request")?;
+
+    Ok(response
+        .bytes()
+        .context("Failed to read CRL from response")?
+        .to_vec())
+}
+
+pub fn save_crl(crl_der: &[u8], output_dir: &Path, verbose: bool) -> Result<()> {
+    fs::create_dir_all(output_dir).context(format!(
+        "Failed to create output directory {}",
+        output_dir.display()
+    ))?;
+
+    let crl = openssl::x509::X509Crl::from_der(crl_der).context("Failed to parse CRL DER")?;
+    let pem = crl.to_pem().context("Failed to convert CRL to PEM")?;
+    let path = output_dir.join("crl.pem");
+    fs::write(&path, &pem).context(format!("Failed to write CRL to {}", path.display()))?;
+    if verbose {
+        println!("Saved CRL to {}", path.display());
+    }
+
+    Ok(())
+}
