@@ -21,6 +21,7 @@ enum SnpOid {
     Tee,
     Snp,
     Ucode,
+    Fmc,
     HwId,
 }
 
@@ -31,6 +32,7 @@ impl SnpOid {
             SnpOid::Tee => oid!(1.3.6.1.4.1.3704.1.3.2),
             SnpOid::Snp => oid!(1.3.6.1.4.1.3704.1.3.3),
             SnpOid::Ucode => oid!(1.3.6.1.4.1.3704.1.3.8),
+            SnpOid::Fmc => oid!(1.3.6.1.4.1.3704.1.3.9),
             SnpOid::HwId => oid!(1.3.6.1.4.1.3704.1.4),
         }
     }
@@ -295,6 +297,22 @@ fn verify_tcb(vcek: &Certificate, report: &AttestationReport, opts: &VerifyOptio
         }
         if !opts.quiet {
             println!("TCB microcode matches ({})", report.reported_tcb.microcode);
+        }
+    }
+
+    if let Some(fmc) = report.reported_tcb.fmc {
+        let ext = extensions
+            .get(&SnpOid::Fmc.oid())
+            .ok_or(anyhow::anyhow!("VCEK certificate is missing the FMC field"))?;
+
+        if !check_cert_extension(ext, &fmc.to_le_bytes()) {
+            return Err(anyhow::anyhow!(
+                "TCB FMC mismatch: report={} vs certificate",
+                fmc
+            ));
+        }
+        if !opts.quiet {
+            println!("TCB FMC matches ({})", fmc);
         }
     }
 
