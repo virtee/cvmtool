@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 use crate::VerifyOptions;
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use asn1_rs::{Oid, oid};
 use openssl::{
     ecdsa::EcdsaSig,
@@ -43,11 +43,40 @@ pub fn parse_report(bytes: &[u8]) -> Result<AttestationReport> {
         .map_err(|e| anyhow::anyhow!("Failed to parse SEV report: {:?}", e))
 }
 
+#[derive(Clone, Copy, Debug)]
+enum SigningKey {
+    Vcek,
+    Vlek,
+    None,
+    Unknown(u32),
+}
+
+impl From<u32> for SigningKey {
+    fn from(value: u32) -> Self {
+        // AMD SEV-SNP spec 56860, Table 21, offset 48h, bits 4:2
+        match value {
+            0 => Self::Vcek,
+            1 => Self::Vlek,
+            7 => Self::None,
+            _ => Self::Unknown(value),
+        }
+    }
+}
+
 pub fn verify_report(
     report: &AttestationReport,
     certs_dir: &Path,
     opts: &VerifyOptions,
 ) -> Result<()> {
+    match SigningKey::from(report.key_info.signing_key()) {
+        SigningKey::Vcek => (),
+        SigningKey::Vlek => bail!("Cannot verify signature: VLEK is not supported yet"),
+        SigningKey::None => bail!("Cannot verify signature: report is not signed"),
+        SigningKey::Unknown(k) => {
+            bail!("Cannot verify signature: report is signed with unknown key ({k})")
+        }
+    }
+
     let ark_path = find_cert_in_dir(certs_dir, "ark")?;
     let ask_path = find_cert_in_dir(certs_dir, "ask")?;
     let vcek_path = find_cert_in_dir(certs_dir, "vcek")?;
